@@ -1,0 +1,135 @@
+#!/usr/bin/env perl
+use strict;
+use warnings;
+use 5.010;
+
+use Data::Dumper;
+use YAML::PP;
+use YAML::PP::Common qw/ YAML_PLAIN_SCALAR_STYLE /;
+use Getopt::Long::Descriptive;
+my ($opt, $usage) = describe_options(
+    <<'EOM',
+yamlpp-schema-convert <input-file>
+
+Converts types like booleans and numbers from YAML 1.1 to 1.2
+EOM
+    [ 'help|h', "print usage message and exit", { shortcircuit => 1 } ],
+);
+print($usage->text), exit if $opt->help;
+
+if (not @ARGV) {
+    print $usage->text;
+    exit 1;
+}
+my ($in) = @ARGV;
+
+my $core = YAML::PP::Schema->new( yaml_version => '1.2', boolean => 'JSON::PP' );
+$core->load_subschemas('+');
+my $yaml11 = YAML::PP::Schema->new( yaml_version => '1.1', boolean => 'JSON::PP' );
+$yaml11->load_subschemas('+');
+my $rep = YAML::PP::Representer->new(
+    schema => $core,
+);
+
+my ($error, $tokens) = YAML::PP::Parser->yaml_to_tokens(file => ( $in eq '-' ? \*STDIN : $in ));
+#warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$tokens], ['tokens']);
+if ($error) {
+    die $error;
+}
+
+my @pass = qw(
+    EOL SPACE WS
+    DOC_START DOC_END YAML_DIRECTIVE
+    COLON QUESTION
+    ALIAS ANCHOR TAG
+    SINGLEQUOTE SINGLEQUOTED_LINE
+    DOUBLEQUOTE DOUBLEQUOTED_LINE
+    FLOW_COMMA
+);
+my %pass;
+@pass{ @pass } = (1) x @pass;
+my %after_tag = (
+    block => { WS => 1, SPACE => 1, PLAIN => 1 },
+    flow => { WS => 1, SPACE => 1, EOL => 1, PLAIN => 1 },
+);
+my %flowstart = ( FLOWSEQ_START => 1, FLOWMAP_START => 1 );
+my %flowend = ( FLOWSEQ_END => 1, FLOWMAP_END => 1 );
+my %subtokens = (
+    BLOCK_SCALAR => 1,
+    QUOTED_MULTILINE => 1,
+    PLAIN_MULTI => 1,
+    QUOTED => 1,
+);
+
+my $out = '';
+my $flow = 0;
+my $tag;
+for my $token (@$tokens) {
+    my $name = $token->{name};
+    my $value = $token->{value};
+    if ($flowstart{ $name }) {
+        $flow++;
+        $out .= $value;
+        next;
+    }
+    if ($flowend{ $name }) {
+        $flow--;
+        $out .= $value;
+        next;
+    }
+    if ($name eq 'TAG') {
+        $tag = $value;
+        if ($tag eq '!!str') {
+            $tag = '<tag:yaml.org,2002:str>';
+        }
+    }
+    elsif (defined $tag) {
+        my $after = $after_tag{ $flow ? 'flow' : 'block' };
+        unless ($after->{ $name }) {
+            undef $tag;
+        }
+    }
+
+    if ($pass{ $name }) {
+        $out .= $value;
+        next;
+    }
+    if ($subtokens{ $name }) {
+        my $subtokens = $token->{subtokens};
+        for my $token (@$subtokens) {
+            my $name = $token->{name};
+            my $value = $token->{orig} // $token->{value};
+            $out .= $value;
+        }
+        next;
+    }
+    if ($name eq 'PLAIN') {
+        my $event = {
+            name => 'scalar_event',
+            value => $token->{value},
+            style => YAML_PLAIN_SCALAR_STYLE,
+            tag => $tag,
+        };
+        (my $quote, $value) = convert_scalar($event);
+        $out .= $quote . $value . $quote;
+        next;
+    }
+    warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$token], ['token']);
+    die "Unknown token $name";
+}
+print $out;
+
+sub convert_scalar {
+    my ($event) = @_;
+    my $loaded = $yaml11->load_scalar(undef, $event);
+    my $node = {
+        value => $loaded,
+    };
+    my $dump = $rep->represent_node($node);
+    my $style = '';
+    if ($node->{style} and $node->{style} != YAML_PLAIN_SCALAR_STYLE) {
+        $style = "'";
+    }
+    return ($style), $node->{data};
+}
+

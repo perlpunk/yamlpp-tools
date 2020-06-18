@@ -1,0 +1,30 @@
+---
+# test
+foo: true
+'bar': yes # test
+
+? !!str abc
+  def  
+   ghi
+: | 
+  literal
+fold: &f >
+  folded
+ali: *f
+no value: !!str
+NO: "value"
+...
+%YAML 1.2
+---
+double: "  
+  double \t"
+single: 'single
+  '
+a: [ NO, off,   
+    Y, !!str YES, !!str
+    Off ]
+
+--- n
+---
+{ 3e3: 0o7 }
+
