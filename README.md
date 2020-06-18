@@ -5,6 +5,11 @@ Just a place for tools using YAML::PP
 Experimental script to convert types like booleans and numbers in a given
 YAML file from YAML 1.1 to 1.2. Keeps all whitespace and comments.
 
+To get an impression on how many things are different in the two YAML versions,
+have a look at the comparison of the [YAML 1.2 Core Schema and YAML 1.1
+Types](https://perlpunk.github.io/yaml-test-schema/data.html).
+Not only booleans are different, but also tiny details in number formats.
+
 See example files [in.yaml](/data/in.yaml) and [out.yaml](/data/out.yaml).
 
 Example usage:
@@ -16,7 +21,7 @@ Example usage:
     % perl bin/yamlpp-schema-convert data/in.yaml > data/out.yaml
     % vimdiff data/in.yaml data/out.yaml
 
-To highlight the files and see trailing spaces, you can use:
+To highlight the files and see things like trailing spaces, you can use:
 
     % yamlpp-highlight data/in.yaml
     % yamlpp-highlight data/out.yaml

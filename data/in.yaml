@@ -16,13 +16,13 @@ NO: "value"
 ...
 %YAML 1.2
 ---
-double: "  
-  double \t"
-single: 'single
-  '
-a: [ NO, off,   
-    Y, !!str YES, !!str
-    Off ]
+- double: "  
+    double \t"
+- single: 'single
+    '
+- a: [ NO, off,   
+      Y, !!str YES, !!str
+      Off ]
 
 --- n
 ---

@@ -16,13 +16,13 @@ false: "value"
 ...
 %YAML 1.2
 ---
-double: "  
-  double \t"
-single: 'single
-  '
-a: [ false, false,   
-    true, !!str YES, !!str
-    Off ]
+- double: "  
+    double \t"
+- single: 'single
+    '
+- a: [ false, false,   
+      true, !!str YES, !!str
+      Off ]
 
 --- false
 ---
