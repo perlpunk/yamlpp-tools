@@ -6,6 +6,7 @@ use 5.010;
 use Data::Dumper;
 use YAML::PP;
 use YAML::PP::Common qw/ YAML_PLAIN_SCALAR_STYLE /;
+use Encode;
 use Getopt::Long::Descriptive;
 my ($opt, $usage) = describe_options(
     <<'EOM',
@@ -39,7 +40,7 @@ if ($error) {
 
 my @pass = qw(
     EOL SPACE WS
-    DOC_START DOC_END YAML_DIRECTIVE
+    DOC_START DOC_END YAML_DIRECTIVE TAG_DIRECTIVE
     COLON DASH QUESTION
     ALIAS ANCHOR TAG
     SINGLEQUOTE SINGLEQUOTED_LINE
@@ -117,7 +118,7 @@ for my $token (@$tokens) {
     warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$token], ['token']);
     die "Unknown token $name";
 }
-print $out;
+print encode_utf8 $out;
 
 sub convert_scalar {
     my ($event) = @_;
